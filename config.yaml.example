@@ -1,0 +1,12 @@
+http:
+    port: 8080
+mongo:
+    app_name:
+    host: localhost
+    port: 27017
+    username:
+    password:
+    params:
+    database: go-clean-arch
+    min_pool_size: 5
+    max_pool_size:  100
