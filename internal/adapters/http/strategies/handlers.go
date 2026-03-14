@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/0mithun/go-clean-arch/internal/adapters/http/validation"
 	strategiesUC "github.com/0mithun/go-clean-arch/internal/usecases/strategies"
 	"github.com/0mithun/go-clean-arch/pkg/apierrors"
 	"github.com/gin-gonic/gin"
@@ -28,10 +29,27 @@ func NewHandlers(svc strategiesUC.Service) Handlers {
 
 func (h handlers) Create(ctx *gin.Context) {
 	var request CreateRequest
+
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		apiErr := apierrors.NewBadRequestError("invalid json body")
 
 		ctx.AbortWithStatusJSON(apiErr.StatusCode(), apiErr)
+		return
+	}
+
+	request.Name = strings.TrimSpace(request.Name)
+	request.Description = strings.TrimSpace(request.Description)
+
+	validationErrors, err := validation.ValidateStruct(request)
+	if err != nil {
+		apiErr := apierrors.NewBadRequestError("request validation failed")
+		ctx.AbortWithStatusJSON(apiErr.StatusCode(), apiErr)
+		return
+	}
+
+	if len(validationErrors) > 0 {
+		ctx.AbortWithStatusJSON(http.StatusUnprocessableEntity, validation.NewErrorResponse(validationErrors))
+		return
 	}
 
 	svcReq := &strategiesUC.CreateStrategyRequest{
@@ -44,6 +62,7 @@ func (h handlers) Create(ctx *gin.Context) {
 		apiErr := apierrors.FromError(err)
 
 		ctx.AbortWithStatusJSON(apiErr.StatusCode(), apiErr)
+		return
 	}
 
 	createResponse := &CreateResponse{
